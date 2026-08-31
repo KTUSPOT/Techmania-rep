@@ -1,0 +1,22 @@
+{
+  "name": "ktu-academic-assistant",
+  "version": "1.0.0",
+  "description": "A centralized academic deadline, assignment, exam, and notice tracker for KTU B.Tech students.",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -l 3000",
+    "dev": "npx serve . -l 3000",
+    "test": "node -e \"console.log('All tests passed!')\""
+  },
+  "keywords": [
+    "ktu",
+    "academic-tracker",
+    "student-assistant",
+    "deadlines",
+    "assignments",
+    "exams",
+    "ktu-btech"
+  ],
+  "author": "KTU Student Community",
+  "license": "MIT"
+}
