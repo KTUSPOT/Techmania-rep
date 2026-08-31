@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="KTU Student Academic Assistant - All-in-one deadline tracker for KTU B.Tech students. Track assignments, series exams, lab records, projects, and KTU notices with smart reminders.">
+  <meta name="keywords" content="KTU, APJ Abdul Kalam Technological University, Academic Tracker, Deadline Reminders, KTU BTech, Series Exams, Assignments, KTU Notices">
+  <meta name="author" content="KTU Academic Assistant">
+  <title>KTU Student Academic Assistant | Centralized Deadline & Notice Tracker</title>
+  
+  <!-- PWA & Mobile Web App Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KTU Assistant">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Background Glow Accents -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-glow bg-glow-3"></div>
+
+  <!-- Main App Container -->
+  <div class="app-wrapper">
+    <!-- Top Header Navigation -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <div class="logo-badge">KTU</div>
+          <div class="logo-icon-wrap">
+            <i data-lucide="graduation-cap" class="brand-icon"></i>
+          </div>
+        </div>
+        <div class="brand-text">
+          <div class="title-row">
+            <h1>Academic Assistant</h1>
+            <span class="version-tag">KTU B.Tech</span>
+          </div>
+          <p class="subtitle">Centralized Deadline, Exam & Notice Hub</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Notification Permission Status Button -->
+        <button id="btn-notification-toggle" class="btn btn-secondary btn-icon-text" title="Enable browser deadline notifications">
+          <i data-lucide="bell" id="bell-icon"></i>
+          <span id="notif-btn-label">Enable Alerts</span>
+        </button>
+
+        <!-- Quick Demo Data Load -->
+        <button id="btn-load-demo" class="btn btn-ghost btn-icon-text" title="Load KTU S5/S6 CSE Sample Curriculum Deadlines">
+          <i data-lucide="sparkles"></i>
+          <span>Sample Data</span>
+        </button>
+
+        <!-- Export to Calendar -->
+        <button id="btn-export-ics" class="btn btn-ghost btn-icon-text" title="Export all deadlines to Google/Apple Calendar (.ics)">
+          <i data-lucide="calendar-plus"></i>
+          <span>Sync .ICS</span>
+        </button>
+
+        <!-- Backup / Settings -->
+        <button id="btn-open-settings" class="btn btn-ghost btn-icon" title="Backup, Restore & Settings">
+          <i data-lucide="settings"></i>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button id="btn-theme-toggle" class="btn btn-ghost btn-icon" title="Toggle Dark/Light Mode">
+          <i data-lucide="moon" id="theme-icon"></i>
+        </button>
+
+        <!-- Main Primary CTA: Add Deadline -->
+        <button id="btn-open-add-modal" class="btn btn-primary btn-glow">
+          <i data-lucide="plus-circle"></i>
+          <span>Add Deadline</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Urgent Countdown Warning Banner (Appears if tasks are due within 48h) -->
+    <div id="urgent-alert-banner" class="urgent-banner hidden">
+      <div class="urgent-banner-content">
+        <div class="pulse-indicator"></div>
+        <i data-lucide="alert-triangle" class="urgent-icon"></i>
+        <div class="urgent-text">
+          <strong id="urgent-count-text">2 Deadlines due in less than 48 hours!</strong>
+          <span id="urgent-preview-text">Submit DBMS Record and AI Assignment 1 before marks deduction.</span>
+        </div>
+      </div>
+      <div class="urgent-banner-actions">
+        <button id="btn-filter-urgent" class="btn btn-sm btn-urgent-action">View Urgent Now</button>
+        <button id="btn-dismiss-urgent-banner" class="btn-icon-close" title="Dismiss banner">&times;</button>
+      </div>
+    </div>
+
+    <!-- Stats Metric Cards Grid -->
+    <section class="stats-grid">
+      <div class="stat-card" data-stat="pending">
+        <div class="stat-icon-wrap icon-amber">
+          <i data-lucide="clock"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Pending Deadlines</span>
+          <div class="stat-number" id="stat-pending-count">0</div>
+          <span class="stat-subtext" id="stat-pending-sub">Awaiting action</span>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card-urgent" data-stat="urgent">
+        <div class="stat-icon-wrap icon-rose">
+          <i data-lucide="flame"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Due in &le; 2 Days</span>
+          <div class="stat-number stat-highlight-rose" id="stat-urgent-count">0</div>
+          <span class="stat-subtext text-rose">High priority attention</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-stat="completed">
+        <div class="stat-icon-wrap icon-emerald">
+          <i data-lucide="check-circle-2"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Completed / Submitted</span>
+          <div class="stat-number stat-highlight-emerald" id="stat-completed-count">0</div>
+          <span class="stat-subtext" id="stat-completion-rate">0% completion rate</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-stat="subjects">
+        <div class="stat-icon-wrap icon-cyan">
+          <i data-lucide="book-open"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Active KTU Subjects</span>
+          <div class="stat-number" id="stat-subjects-count">0</div>
+          <span class="stat-subtext" id="stat-exam-count">0 upcoming exams</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-stat="workload">
+        <div class="stat-icon-wrap icon-violet">
+          <i data-lucide="activity"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Semester Workload</span>
+          <div class="stat-number" id="stat-workload-level">Light</div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="stat-workload-bar" style="width: 20%;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="view-tabs-nav">
+      <div class="tabs-list">
+        <button class="tab-btn active" data-view="list">
+          <i data-lucide="list-todo"></i>
+          <span>All Deadlines</span>
+          <span class="tab-badge" id="badge-all-deadlines">0</span>
+        </button>
+        <button class="tab-btn" data-view="kanban">
+          <i data-lucide="kanban"></i>
+          <span>Kanban Board</span>
+        </button>
+        <button class="tab-btn" data-view="calendar">
+          <i data-lucide="calendar"></i>
+          <span>Academic Calendar</span>
+        </button>
+        <button class="tab-btn" data-view="notices">
+          <i data-lucide="megaphone"></i>
+          <span>KTU & College Notices</span>
+          <span class="tab-badge badge-pulse" id="badge-notices">4</span>
+        </button>
+        <button class="tab-btn" data-view="analytics">
+          <i data-lucide="pie-chart"></i>
+          <span>Subject Breakdown</span>
+        </button>
+      </div>
+
+      <!-- Quick Search & Actions -->
+      <div class="tabs-actions">
+        <div class="view-mode-toggle" id="list-card-toggle-group">
+          <button class="btn-toggle active" id="btn-view-cards" title="Cards View">
+            <i data-lucide="layout-grid"></i>
+          </button>
+          <button class="btn-toggle" id="btn-view-table" title="Table View">
+            <i data-lucide="table"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Filter & Search Toolbar (Visible for Deadlines views) -->
+    <section class="toolbar-section" id="deadlines-toolbar">
+      <div class="search-input-wrap">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="filter-search" placeholder="Search tasks, subjects (e.g. AI, DBMS, CST301), notes..." autocomplete="off">
+        <button id="btn-clear-search" class="btn-clear hidden" title="Clear search">&times;</button>
+      </div>
+
+      <div class="filters-group">
+        <!-- Subject Filter -->
+        <div class="select-wrap">
+          <i data-lucide="book-bookmark" class="select-icon"></i>
+          <select id="filter-subject" aria-label="Filter by Subject">
+            <option value="all">All Subjects</option>
+          </select>
+        </div>
+
+        <!-- Category/Type Filter -->
+        <div class="select-wrap">
+          <i data-lucide="tag" class="select-icon"></i>
+          <select id="filter-category" aria-label="Filter by Category">
+            <option value="all">All Categories</option>
+            <option value="assignment">📝 Assignment</option>
+            <option value="exam">🎯 Series / University Exam</option>
+            <option value="lab">🧪 Lab Record / Practical</option>
+            <option value="project">💻 Mini / Major Project</option>
+            <option value="registration">📋 KTU Portal Registration</option>
+            <option value="activity">🏆 KTU Activity Points</option>
+            <option value="other">📌 Other Notice</option>
+          </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="select-wrap">
+          <i data-lucide="check-circle" class="select-icon"></i>
+          <select id="filter-status" aria-label="Filter by Status">
+            <option value="all">All Statuses</option>
+            <option value="pending">🔴 Pending</option>
+            <option value="in-progress">🟡 In Progress</option>
+            <option value="completed">🟢 Completed</option>
+            <option value="overdue">⚠️ Overdue</option>
+          </select>
+        </div>
+
+        <!-- Urgency Quick Chips -->
+        <div class="urgency-chips">
+          <button class="chip-btn active" data-urgency="all">All Time</button>
+          <button class="chip-btn" data-urgency="urgent">⚡ Due &le; 48h</button>
+          <button class="chip-btn" data-urgency="week">📅 This Week</button>
+          <button class="chip-btn" data-urgency="high-priority">🔴 High Priority</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN VIEW PANELS -->
+    <main class="main-content">
+      
+      <!-- 1. DEADLINES LIST / CARDS VIEW -->
+      <section id="view-list" class="view-panel active">
+        <!-- Empty State Container -->
+        <div id="deadlines-empty-state" class="empty-state hidden">
+          <div class="empty-icon-wrap">
+            <i data-lucide="clipboard-check" class="empty-icon"></i>
+          </div>
+          <h3>No Deadlines Found</h3>
+          <p>You don't have any deadlines matching your current filter, or your task list is clean!</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" id="btn-empty-add">
+              <i data-lucide="plus-circle"></i> Add First Deadline
+            </button>
+            <button class="btn btn-secondary" id="btn-empty-demo">
+              <i data-lucide="sparkles"></i> Load Sample KTU Deadlines
+            </button>
+          </div>
+        </div>
+
+        <!-- Cards Grid Container -->
+        <div id="deadlines-cards-container" class="deadline-cards-grid">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Table View Container -->
+        <div id="deadlines-table-container" class="deadlines-table-wrapper hidden">
+          <table class="deadlines-table">
+            <thead>
+              <tr>
+                <th class="th-status">Status</th>
+                <th class="th-subject">Subject & Code</th>
+                <th class="th-task">Task Details</th>
+                <th class="th-type">Category</th>
+                <th class="th-deadline">Due Date & Countdown</th>
+                <th class="th-priority">Priority</th>
+                <th class="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="deadlines-table-body">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 2. KANBAN BOARD VIEW -->
+      <section id="view-kanban" class="view-panel">
+        <div class="kanban-header">
+          <div>
+            <h2>Academic Kanban Pipeline</h2>
+            <p>Drag and drop tasks or use status controls to progress your submissions.</p>
+          </div>
+          <button class="btn btn-sm btn-secondary" id="btn-kanban-add">
+            <i data-lucide="plus"></i> Add Task
+          </button>
+        </div>
+
+        <div class="kanban-board">
+          <!-- Column 1: Pending -->
+          <div class="kanban-column" data-status="pending" id="kanban-col-pending">
+            <div class="kanban-col-header header-pending">
+              <div class="col-title-wrap">
+                <span class="status-dot dot-pending"></span>
+                <h3>Pending / To Do</h3>
+              </div>
+              <span class="col-count" id="kanban-count-pending">0</span>
+            </div>
+            <div class="kanban-cards-list" id="kanban-list-pending" data-drop-status="pending">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Column 2: In Progress -->
+          <div class="kanban-column" data-status="in-progress" id="kanban-col-in-progress">
+            <div class="kanban-col-header header-in-progress">
+              <div class="col-title-wrap">
+                <span class="status-dot dot-in-progress"></span>
+                <h3>In Progress / Doing</h3>
+              </div>
+              <span class="col-count" id="kanban-count-in-progress">0</span>
+            </div>
+            <div class="kanban-cards-list" id="kanban-list-in-progress" data-drop-status="in-progress">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Column 3: Completed -->
+          <div class="kanban-column" data-status="completed" id="kanban-col-completed">
+            <div class="kanban-col-header header-completed">
+              <div class="col-title-wrap">
+                <span class="status-dot dot-completed"></span>
+                <h3>Submitted / Completed</h3>
+              </div>
+              <span class="col-count" id="kanban-count-completed">0</span>
+            </div>
+            <div class="kanban-cards-list" id="kanban-list-completed" data-drop-status="completed">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. ACADEMIC CALENDAR VIEW -->
+      <section id="view-calendar" class="view-panel">
+        <div class="calendar-layout">
+          <!-- Calendar Main Grid -->
+          <div class="calendar-main-card">
+            <div class="calendar-nav-bar">
+              <div class="cal-nav-left">
+                <button class="btn btn-icon btn-ghost" id="cal-prev-month" title="Previous Month">
+                  <i data-lucide="chevron-left"></i>
+                </button>
+                <h2 id="calendar-month-year-label">August 2026</h2>
+                <button class="btn btn-icon btn-ghost" id="cal-next-month" title="Next Month">
+                  <i data-lucide="chevron-right"></i>
+                </button>
+              </div>
+              <div class="cal-nav-right">
+                <button class="btn btn-sm btn-ghost" id="cal-today-btn">Today</button>
+              </div>
+            </div>
+
+            <!-- Calendar Days Header -->
+            <div class="calendar-weekdays-grid">
+              <span>Sun</span>
+              <span>Mon</span>
+              <span>Tue</span>
+              <span>Wed</span>
+              <span>Thu</span>
+              <span>Fri</span>
+              <span>Sat</span>
+            </div>
+
+            <!-- Calendar Days Grid -->
+            <div class="calendar-days-grid" id="calendar-days-grid">
+              <!-- Dynamically generated days -->
+            </div>
+          </div>
+
+          <!-- Calendar Day Details Sidebar -->
+          <div class="calendar-sidebar-card">
+            <div class="cal-sidebar-header">
+              <div class="selected-date-info">
+                <span class="cal-badge-today" id="sidebar-day-badge">Selected Date</span>
+                <h3 id="sidebar-selected-date-title">Deadlines on this date</h3>
+              </div>
+              <button class="btn btn-sm btn-primary" id="btn-cal-add-date">
+                <i data-lucide="plus"></i> Add on this Date
+              </button>
+            </div>
+
+            <div class="cal-sidebar-events-list" id="sidebar-events-list">
+              <!-- Dynamically populated with items for selected day -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. KTU & COLLEGE NOTICES HUB -->
+      <section id="view-notices" class="view-panel">
+        <div class="notices-header-card">
+          <div class="notices-intro">
+            <div class="notices-badge">KTU Official & College Bulletin</div>
+            <h2>Campus & Academic Notice Board</h2>
+            <p>Never miss university registration windows, revaluation notices, timetable releases, or class representative broadcasts.</p>
+          </div>
+          <div class="notices-actions">
+            <button class="btn btn-primary" id="btn-add-notice">
+              <i data-lucide="plus-circle"></i> Post Class Notice
+            </button>
+          </div>
+        </div>
+
+        <div class="notices-filter-bar">
+          <div class="notice-chips">
+            <button class="chip-btn active" data-notice-filter="all">All Notices</button>
+            <button class="chip-btn" data-notice-filter="ktu">🏛️ KTU Official</button>
+            <button class="chip-btn" data-notice-filter="college">🏫 College Portal</button>
+            <button class="chip-btn" data-notice-filter="cr">📢 Class Rep (CR)</button>
+            <button class="chip-btn" data-notice-filter="pinned">📌 Pinned / Urgent</button>
+          </div>
+        </div>
+
+        <div class="notices-grid" id="notices-container">
+          <!-- Dynamically populated notices -->
+        </div>
+      </section>
+
+      <!-- 5. SUBJECT BREAKDOWN & ANALYTICS -->
+      <section id="view-analytics" class="view-panel">
+        <div class="analytics-header">
+          <div>
+            <h2>KTU Subject Breakdown & Workload</h2>
+            <p>Track your assignments, series exams, and internal marks weightage per KTU subject code.</p>
+          </div>
+        </div>
+
+        <div class="analytics-grid" id="analytics-subjects-grid">
+          <!-- Dynamically populated subject summary cards -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <span class="footer-logo">KTU Academic Assistant</span>
+          <p>A unified productivity toolkit for APJ Abdul Kalam Technological University students.</p>
+        </div>
+        <div class="footer-links">
+          <a href="https://ktu.edu.in" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <i data-lucide="external-link"></i> KTU Official Portal
+          </a>
+          <a href="https://app.ktu.edu.in" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <i data-lucide="lock"></i> KTU Student Login
+          </a>
+          <button id="btn-footer-backup" class="footer-link btn-link-ghost">
+            <i data-lucide="download"></i> Backup Data (JSON)
+          </button>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>Built with ❤️ for KTU Students &bull; No login required &bull; Works 100% Offline &bull; Stored locally on your device</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal 1: Add / Edit Deadline Modal -->
+  <div id="modal-deadline" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-deadline-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-wrap" id="modal-deadline-icon">
+            <i data-lucide="plus-circle"></i>
+          </div>
+          <div>
+            <h3 id="modal-deadline-title">Add Academic Deadline</h3>
+            <p class="modal-subtitle">Track an assignment, exam, lab record, or project submission</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" id="btn-close-deadline-modal" aria-label="Close modal">&times;</button>
+      </div>
+
+      <form id="form-deadline" class="modal-form">
+        <input type="hidden" id="deadline-id" value="">
+
+        <div class="form-row form-row-2">
+          <!-- Subject Name -->
+          <div class="form-group">
+            <label for="deadline-subject">Subject / Course Name <span class="required">*</span></label>
+            <input type="text" id="deadline-subject" placeholder="e.g. Artificial Intelligence, DBMS, OS" required list="subject-suggestions">
+            <datalist id="subject-suggestions">
+              <option value="Artificial Intelligence (AI)">
+              <option value="Database Management Systems (DBMS)">
+              <option value="Operating Systems (OS)">
+              <option value="Computer Networks (CN)">
+              <option value="Design & Analysis of Algorithms (DAA)">
+              <option value="Compiler Design">
+              <option value="Machine Learning">
+              <option value="Microprocessors & Microcontrollers">
+              <option value="Discrete Mathematical Structures">
+              <option value="Industrial Economics & Foreign Trade">
+            </datalist>
+          </div>
+
+          <!-- Subject Code -->
+          <div class="form-group">
+            <label for="deadline-course-code">KTU Course Code</label>
+            <input type="text" id="deadline-course-code" placeholder="e.g. CST301, CST303, MAT204" style="text-transform: uppercase;">
+          </div>
+        </div>
+
+        <!-- Task Title -->
+        <div class="form-group">
+          <label for="deadline-title">Task / Submission Title <span class="required">*</span></label>
+          <input type="text" id="deadline-title" placeholder="e.g. Module 3 Assignment, Series 1 Exam, Record Submission" required>
+        </div>
+
+        <div class="form-row form-row-2">
+          <!-- Category / Type -->
+          <div class="form-group">
+            <label for="deadline-type">Category / Type <span class="required">*</span></label>
+            <select id="deadline-type" required>
+              <option value="assignment">📝 Assignment</option>
+              <option value="exam">🎯 Series / University Exam</option>
+              <option value="lab">🧪 Lab Record / Practical</option>
+              <option value="project">💻 Mini / Major Project</option>
+              <option value="registration">📋 KTU Portal Registration</option>
+              <option value="activity">🏆 KTU Activity Points</option>
+              <option value="other">📌 Other Notice</option>
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div class="form-group">
+            <label for="deadline-priority">Priority Level <span class="required">*</span></label>
+            <select id="deadline-priority" required>
+              <option value="high">🔴 High / Urgent (Crucial for Internals)</option>
+              <option value="medium" selected>🟡 Medium (Standard)</option>
+              <option value="low">🟢 Low (Flexible)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row form-row-2">
+          <!-- Due Date & Time -->
+          <div class="form-group">
+            <label for="deadline-datetime">Due Date & Time <span class="required">*</span></label>
+            <input type="datetime-local" id="deadline-datetime" required>
+          </div>
+
+          <!-- Status -->
+          <div class="form-group">
+            <label for="deadline-status">Status</label>
+            <select id="deadline-status">
+              <option value="pending">🔴 Pending / Not Started</option>
+              <option value="in-progress">🟡 In Progress</option>
+              <option value="completed">🟢 Completed / Submitted</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row form-row-2">
+          <!-- Weightage / Internal Marks (Optional) -->
+          <div class="form-group">
+            <label for="deadline-marks">Internal Weightage / Marks</label>
+            <input type="number" id="deadline-marks" placeholder="e.g. 10 (Marks)" min="0" max="100">
+          </div>
+
+          <!-- Submission Link / Platform -->
+          <div class="form-group">
+            <label for="deadline-link">Submission Link / Platform</label>
+            <input type="url" id="deadline-link" placeholder="https://classroom.google.com/...">
+          </div>
+        </div>
+
+        <!-- Notes / Instructions -->
+        <div class="form-group">
+          <label for="deadline-notes">Notes / Special Instructions</label>
+          <textarea id="deadline-notes" rows="3" placeholder="e.g. Must write in A4 sheets, include cover page with KTU Reg No, submit hardcopy to staff room..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-deadline">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-glow" id="btn-save-deadline">
+            <i data-lucide="save"></i>
+            <span id="btn-save-label">Save Deadline</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Add Custom Notice / CR Announcement -->
+  <div id="modal-notice" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-wrap icon-cyan">
+            <i data-lucide="megaphone"></i>
+          </div>
+          <div>
+            <h3>Post Class / Academic Notice</h3>
+            <p class="modal-subtitle">Share CR announcement or important college notification</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" id="btn-close-notice-modal">&times;</button>
+      </div>
+
+      <form id="form-notice" class="modal-form">
+        <div class="form-group">
+          <label for="notice-title">Notice Headline <span class="required">*</span></label>
+          <input type="text" id="notice-title" placeholder="e.g. S5 B.Tech Revaluation Results Published, Class Cancelled on Friday" required>
+        </div>
+
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label for="notice-category">Notice Source / Category <span class="required">*</span></label>
+            <select id="notice-category" required>
+              <option value="cr">📢 Class Representative (CR)</option>
+              <option value="college">🏫 College Department Portal</option>
+              <option value="ktu">🏛️ KTU Official</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="notice-urgent-check" class="checkbox-label-wrap">
+              <span>Mark as Urgent / Pinned</span>
+            </label>
+            <div class="custom-checkbox-wrap">
+              <input type="checkbox" id="notice-urgent-check">
+              <label for="notice-urgent-check">Pin to top of notice board</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="notice-content">Notice Details <span class="required">*</span></label>
+          <textarea id="notice-content" rows="4" placeholder="Enter full details, instructions, or circulating messages..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="notice-link">Reference Link (Optional)</label>
+          <input type="url" id="notice-link" placeholder="https://ktu.edu.in/...">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-notice">Cancel</button>
+          <button type="submit" class="btn btn-primary">Post Notice</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Settings & Data Management (JSON Backup/Restore, Presets) -->
+  <div id="modal-settings" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-wrap icon-violet">
+            <i data-lucide="sliders"></i>
+          </div>
+          <div>
+            <h3>Settings & Data Management</h3>
+            <p class="modal-subtitle">Backup, restore, or reset your local KTU deadline database</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" id="btn-close-settings-modal">&times;</button>
+      </div>
+
+      <div class="settings-content">
+        <!-- Section: Presets -->
+        <div class="settings-section">
+          <h4>🎓 KTU Semester Presets</h4>
+          <p>Instantly populate with sample KTU curriculum deadlines for testing or semester kickoff.</p>
+          <div class="settings-actions-row">
+            <button class="btn btn-secondary" id="btn-load-preset-s5-cse">
+              <i data-lucide="sparkles"></i> Load S5/S6 CSE Preset
+            </button>
+            <button class="btn btn-secondary" id="btn-load-preset-generic">
+              <i data-lucide="book-copy"></i> Load General B.Tech Preset
+            </button>
+          </div>
+        </div>
+
+        <!-- Section: Backup & Restore -->
+        <div class="settings-section">
+          <h4>💾 Backup & Transfer (JSON)</h4>
+          <p>Export your full academic profile to share with classmates or restore onto another device.</p>
+          <div class="settings-actions-row">
+            <button class="btn btn-secondary" id="btn-export-json">
+              <i data-lucide="download"></i> Export Backup (.json)
+            </button>
+            <label class="btn btn-secondary file-upload-btn">
+              <i data-lucide="upload"></i> Restore Backup (.json)
+              <input type="file" id="input-import-json" accept=".json" style="display: none;">
+            </label>
+          </div>
+        </div>
+
+        <!-- Section: Calendar Sync -->
+        <div class="settings-section">
+          <h4>📅 Sync with External Calendars</h4>
+          <p>Generate an iCalendar (.ics) file compatible with Google Calendar, Apple Calendar, and Microsoft Outlook.</p>
+          <button class="btn btn-secondary" id="btn-export-ics-settings">
+            <i data-lucide="calendar-plus"></i> Download iCal (.ics) Sync File
+          </button>
+        </div>
+
+        <!-- Section: Danger Zone -->
+        <div class="settings-section danger-zone">
+          <h4 class="text-rose">⚠️ Danger Zone</h4>
+          <p>Permanently wipe all stored deadlines and notices from this browser.</p>
+          <button class="btn btn-danger" id="btn-wipe-all-data">
+            <i data-lucide="trash-2"></i> Wipe All Stored Data
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- App Logic Scripts (Modular) -->
+  <script src="js/storage.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    // Initialize Lucide Icons on load
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      // Check URL parameters for PWA shortcuts
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('action') === 'add' && window.App) {
+        window.App.openDeadlineModal();
+      } else if (urlParams.get('view') && window.App) {
+        window.App.switchView(urlParams.get('view'));
+      }
+    });
+
+    // Register PWA Service Worker for offline functionality
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('[PWA] Service Worker registered:', reg.scope))
+          .catch((err) => console.warn('[PWA] Service Worker registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
